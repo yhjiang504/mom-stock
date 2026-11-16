@@ -10,6 +10,7 @@
 
     <div class="max-w-4xl mx-auto space-y-6">
         
+        <!-- 頂部標題與時間標籤面板 -->
         <header class="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 class="text-3xl md:text-4xl font-black text-blue-900 flex items-center gap-2">
@@ -24,6 +25,7 @@
             </div>
         </header>
 
+        <!-- 主導覽切換按鈕 -->
         <div id="main-tabs" class="grid grid-cols-2 gap-4">
             <button id="btn-fav" onclick="switchTab('favorite')" class="bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition">
                 ⭐ 我的最愛
@@ -33,12 +35,14 @@
             </button>
         </div>
 
+        <!-- 返回按鈕 -->
         <div id="nav-back" class="hidden">
             <button onclick="goBack()" class="bg-slate-700 hover:bg-slate-800 text-white text-xl font-bold py-3 px-6 rounded-2xl shadow transition flex items-center gap-2">
                 ⬅️ 返回上一頁
             </button>
         </div>
 
+        <!-- 動態內容容器 -->
         <main id="app-content" class="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-md min-h-[400px]">
         </main>
 
@@ -48,7 +52,7 @@
         let marketMetadata = { marketDate: "載入中...", systemUpdate: "載入中...", financialUpdate: "載入中..." };
         let stockDatabase = {};
 
-        let favorites = JSON.parse(localStorage.getItem('mom_stock_fav')) || ["2330", "2881"];
+        let favorites = JSON.parse(localStorage.getItem('mom_stock_fav')) || ["2330", "2881", "0050"];
         let currentView = "favorite";
         let selectedCategory = "";
         let searchQuery = "";
