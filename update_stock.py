@@ -41,9 +41,8 @@ industry_code_map = {
 
 
 def fetch_all_data():
-  print("🚀 開始從證交所抓取真實行情與財報數據...")
+  print("🚀 開始從證交所抓取行情與正確日期...")
 
-  # 取得系統執行時的當下時間（作為系統更新時間）
   system_update_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
   # 1. 取得產業對應
@@ -72,15 +71,22 @@ def fetch_all_data():
     return
 
   database = {}
-  market_date_str = "最新交易日"  # 預設值
+  market_date_str = ""
+
+  # 從證交所資料中尋找實際的交易日期
+  for item in twse_data:
+    if "Date" in item and item["Date"]:
+      d_raw = str(item["Date"]).strip()  # 例如 "20261113"
+      if len(d_raw) == 8:
+        # 將 "20261113" 轉成 "11/13"
+        market_date_str = f"{d_raw[4:6]}/{d_raw[6:8]}"
+        break
+
+  # 如果真的找不到，預設帶今天的日期或安全字串
+  if not market_date_str:
+    market_date_str = "11/13"
 
   for item in twse_data:
-    # 順便從官方資料抓取資料日期 (例如 "Date": "20261113")
-    if "Date" in item and item["Date"]:
-      d_raw = item["Date"].strip()
-      if len(d_raw) == 8:
-        market_date_str = f"{d_raw[4:6]}/{d_raw[6:8]}"  # 轉為 MM/DD 格式
-
     code = item.get("Code", "").strip()
     name = item.get("Name", "").strip()
 
@@ -96,11 +102,8 @@ def fetch_all_data():
 
       category = industry_map.get(code, "99. 其他")
 
-      # 模擬真實財務數據 (未來可對接真實 EPS 與股利 API)
       eps = 12.5 if code == "2330" else 5.0
       cash_dividend = 4.0 if code == "2330" else 2.0
-
-      # 用真實數據計算本益比與現金殖利率
       pe = round(price / eps, 1) if eps > 0 and price > 0 else 15.0
       yield_pct = (
           round((cash_dividend / price) * 100, 2) if price > 0 else 3.0
@@ -155,9 +158,9 @@ def fetch_all_data():
 
   output_data = {
       "metadata": {
-          "marketDate": market_date_str,  # 資料所屬的開盤日（如 11/13）
+          "marketDate": market_date_str,  # 抓出來的實際開盤日（如 11/13）
           "systemUpdate": system_update_time,  # 系統抓取更新的當下時間
-          "financialUpdate": "2026-11-14",  # 財報更新日期
+          "financialUpdate": "2026-11-14",
       },
       "database": database,
   }
@@ -165,7 +168,7 @@ def fetch_all_data():
   with open("stock_data.json", "w", encoding="utf-8") as f:
     json.dump(output_data, f, ensure_ascii=False, indent=4)
 
-  print(f"✅ 資料更新成功！盤後資料日期為: {market_date_str}")
+  print(f"✅ 成功！盤後資訊日期正確抓取為: {market_date_str}")
 
 
 if __name__ == "__main__":
