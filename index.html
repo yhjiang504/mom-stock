@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>花花的台股盤後小幫手</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8">
+        
+        <!-- 頂端大標題與更新時間 -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 pb-4 border-b border-slate-200">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-blue-700">📈 花花的台股盤後小幫手</h1>
+                <p class="text-slate-500 text-lg mt-1">即時行情、三大法人籌碼與財報輕鬆看</p>
+                <!-- 顯示資料更新時間 -->
+                <div id="update-time-badge" class="inline-block bg-slate-100 border border-slate-300 text-slate-600 text-xs md:text-sm font-semibold px-3 py-1 rounded-full mt-2">
+                    ⏳ 資料更新時間：載入中...
+                </div>
+            </div>
+            <!-- 返回按鈕 (在詳細頁時顯示) -->
+            <div id="nav-back" class="hidden mt-4 md:mt-0">
+                <button onclick="goBack()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-lg font-bold py-2 px-6 rounded-xl shadow transition">
+                    ⬅ 返回上一頁
+                </button>
+            </div>
+        </div>
+
+        <!-- 頁面切換大按鈕 (首頁時顯示) -->
+        <div id="main-tabs" class="grid grid-cols-2 gap-4 mb-6">
+            <button onclick="switchTab('favorite')" id="btn-fav" class="bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition">
+                ⭐ 我的最愛
+            </button>
+            <button onclick="switchTab('sectors')" id="btn-sec" class="bg-slate-200 text-slate-700 text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition">
+                📂 上市類股總覽
+            </button>
+        </div>
+
+        <!-- 動態內容展示區 -->
+        <div id="app-content">
+            <!-- 內容由 JavaScript 動態載入 -->
+        </div>
+
+    </div>
+
+    <script>
+        // 系統與市場資訊中繼資料 (未來會由 Python 每日收盤後自動寫入最新時間)
+        const marketMetadata = {
+            lastUpdate: "2026-11-16 15:30 (每日收盤後自動更新)"
+        };
+
+        // 模擬完整資料庫
+        const stockDatabase = {
+            "半導體業": [
+                {
+                    code: "2330", name: "台積電", price: 1050, change: 25, changePct: 2.41, volume: "45,210", weekChangePct: 5.2,
+                    pe: 22.5, yieldPct: 1.52, eps: 39.2,
+                    institutional: [
+                        {date: "11/14", foreign: "+12,450", trust: "+2,100", dealer: "-450"},
+                        {date: "11/13", foreign: "+8,300", trust: "+1,500", dealer: "+120"},
+                        {date: "11/12", foreign: "-3,100", trust: "+800", dealer: "-300"},
+                        {date: "11/11", foreign: "+5,400", trust: "+1,200", dealer: "+50"},
+                        {date: "11/08", foreign: "+15,200", trust: "+3,100", dealer: "+890"}
+                    ],
+                    dividends: [{year: "2024", cash: 16.0}, {year: "2023", cash: 13.0}],
+                    epsHistory: [{year: "2024", val: 39.2}, {year: "2023", val: 32.34}],
+                    news: [
+                        {title: "台積電 10 月營收創歷史次高，AI 需求強勁", date: "2026-11-14", url: "#"},
+                        {title: "外資大買台積電逾百億，力挺先進製程擴產", date: "2026-11-12", url: "#"}
+                    ]
+                },
+                {
+                    code: "2454", name: "聯發科", price: 1280, change: -15, changePct: -1.16, volume: "12,400", weekChangePct: -0.8,
+                    pe: 19.8, yieldPct: 4.3, eps: 64.1,
+                    institutional: [
+                        {date: "11/14", foreign: "-1,200", trust: "+450", dealer: "-120"},
+                        {date: "11/13", foreign: "-850", trust: "+200", dealer: "-50"}
+                    ],
+                    dividends: [{year: "2024", cash: 55.0}, {year: "2023", cash: 76.0}],
+                    epsHistory: [{year: "2024", val: 64.1}, {year: "2023", val: 48.51}],
+                    news: [
+                        {title: "聯發科旗艦晶片發表，市佔率持續攀升", date: "2026-11-13", url: "#"}
+                    ]
+                }
+            ],
+            "金融保險業": [
+                {
+                    code: "2881", name: "富邦金", price: 90.5, change: 1.2, changePct: 1.34, volume: "28,300", weekChangePct: 3.1,
+                    pe: 13.2, yieldPct: 3.3, eps: 10.5,
+                    institutional: [
+                        {date: "11/14", foreign: "+4,500", trust: "+800", dealer: "+300"}
+                    ],
+                    dividends: [{year: "2024", cash: 3.0, stock: 0.5}, {year: "2023", cash: 2.0}],
+                    epsHistory: [{year: "2024", val: 10.5}, {year: "2023", val: 4.8}],
+                    news: [
+                        {title: "富邦金前十月每股盈餘亮眼，金控獲利前段班", date: "2026-11-14", url: "#"}
+                    ]
+                }
+            ]
+        };
+
+        let favorites = JSON.parse(localStorage.getItem('mom_stock_fav')) || ["2330", "2881"];
+        let currentView = "favorite";
+        let selectedCategory = "";
+
+        // 初始化渲染
+        function render() {
+            // 更新畫面上顯示的資料最後更新時間
+            document.getElementById('update-time-badge').innerText = `🕒 最後資料更新時間：${marketMetadata.lastUpdate}`;
+
+            const container = document.getElementById('app-content');
+            const navBack = document.getElementById('nav-back');
+            const mainTabs = document.getElementById('main-tabs');
+
+            if (currentView === 'favorite') {
+                mainTabs.classList.remove('hidden');
+                navBack.classList.add('hidden');
+                document.getElementById('btn-fav').className = "bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
+                document.getElementById('btn-sec').className = "bg-slate-200 text-slate-700 text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
+                
+                renderStockList(getFavoriteStocksObject(), "⭐ 媽媽關注的最愛股票", container, true);
+            } 
+            else if (currentView === 'sectors') {
+                mainTabs.classList.remove('hidden');
+                navBack.classList.add('hidden');
+                document.getElementById('btn-sec').className = "bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
+                document.getElementById('btn-fav').className = "bg-slate-200 text-slate-700 text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
+                
+                renderSectorsGrid(container);
+            }
+            else if (currentView === 'sector_detail') {
+                mainTabs.classList.add('hidden');
+                navBack.classList.remove('hidden');
+                renderStockList(stockDatabase[selectedCategory] || [], `📂 ${selectedCategory} 類股清單`, container, false);
+            }
+            else if (currentView === 'stock_detail') {
+                mainTabs.classList.add('hidden');
+                navBack.classList.remove('hidden');
+                renderStockDetail(window.currentStock, container);
+            }
+        }
+
+        function switchTab(tab) {
+            currentView = tab;
+            render();
+        }
+
+        function getFavoriteStocksObject() {
+            let favList = [];
+            for (let cat in stockDatabase) {
+                stockDatabase[cat].forEach(stock => {
+                    if (favorites.includes(stock.code)) favList.push(stock);
+                });
+            }
+            return favList;
+        }
+
+        function renderSectorsGrid(container) {
+            const categories = Object.keys(stockDatabase);
+            let html = `<h2 class="text-2xl font-bold text-slate-700 mb-4">請選擇上市產業類別：</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+            
+            categories.forEach(cat => {
+                html += `
+                    <button onclick="openSector('${cat}')" class="text-left bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 p-6 rounded-2xl shadow transition flex justify-between items-center">
+                        <span class="text-2xl font-bold text-blue-900">📊 ${cat}</span>
+                        <span class="text-2xl text-blue-500 font-bold">➔</span>
+                    </button>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function openSector(cat) {
+            selectedCategory = cat;
+            currentView = 'sector_detail';
+            render();
+        }
+
+        function renderStockList(stocks, title, container, isFavView) {
+            if (stocks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <h2 class="text-2xl font-bold text-slate-600 mb-2">${title}</h2>
+                        <p class="text-slate-400 text-lg">目前沒有加入任何股票，快去類股總覽點選加入最愛吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `<h2 class="text-2xl font-bold text-slate-700 mb-4">${title}</h2>`;
+            html += `<div class="space-y-3">`;
+
+            stocks.forEach(stock => {
+                const isFav = favorites.includes(stock.code);
+                const colorClass = stock.change >= 0 ? "text-red-600" : "text-green-600";
+                const sign = stock.change >= 0 ? "+" : "";
+
+                html += `
+                    <div class="bg-slate-50 border-2 border-slate-200 hover:border-blue-400 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition">
+                        <div class="cursor-pointer flex-1" onclick="openStockDetail('${stock.code}')">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl font-extrabold text-blue-900">${stock.code} ${stock.name}</span>
+                                <span class="text-xl font-bold ${colorClass}">$${stock.price}</span>
+                            </div>
+                            <div class="text-sm text-slate-500 mt-1 flex flex-wrap gap-3">
+                                <span>漲跌: <strong class="${colorClass}">${sign}${stock.change} (${sign}${stock.changePct}%)</strong></span>
+                                <span>成交量: <strong>${stock.volume} 張</strong></span>
+                                <span>本周漲幅: <strong class="${stock.weekChangePct >= 0 ? 'text-red-600' : 'text-green-600'}">${stock.weekChangePct >= 0 ? '+' : ''}${stock.weekChangePct}%</strong></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                            <button onclick="toggleFavorite('${stock.code}')" class="text-2xl px-4 py-2 bg-white border border-slate-300 rounded-xl shadow hover:bg-slate-100 transition">
+                                ${isFav ? '⭐' : '☆'}
+                            </button>
+                            <button onclick="openStockDetail('${stock.code}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-xl shadow transition">
+                                詳細資訊 ➔
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function renderStockDetail(stock, container) {
+            const colorClass = stock.change >= 0 ? "text-red-600" : "text-green-600";
+            const sign = stock.change >= 0 ? "+" : "";
+
+            let html = `
+                <div class="space-y-6">
+                    <div class="bg-blue-50 border-2 border-blue-200 p-6 rounded-2xl shadow-inner">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div>
+                                <span class="text-3xl md:text-4xl font-black text-blue-900">${stock.code} ${stock.name}</span>
+                                <div class="text-3xl font-bold ${colorClass} mt-1">
+                                    $${stock.price} <span class="text-xl">(${sign}${stock.change}, ${sign}${stock.changePct}%)</span>
+                                </div>
+                            </div>
+                            <div class="mt-4 md:mt-0 text-slate-600 text-base space-y-1">
+                                <div>📅 本周漲幅：<strong class="${stock.weekChangePct >= 0 ? 'text-red-600' : 'text-green-600'}">${stock.weekChangePct >= 0 ? '+' : ''}${stock.weekChangePct}%</strong></div>
+                                <div>📊 當日成交量：<strong>${stock.volume} 張</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-center">
+                            <div class="text-slate-500 font-bold">本益比 (P/E)</div>
+                            <div class="text-2xl font-extrabold text-blue-600 mt-1">${stock.pe} 倍</div>
+                        </div>
+                        <div class="bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-center">
+                            <div class="text-slate-500 font-bold">現金殖利率</div>
+                            <div class="text-2xl font-extrabold text-emerald-600 mt-1">${stock.yieldPct}%</div>
+                        </div>
+                        <div class="bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm text-center">
+                            <div class="text-slate-500 font-bold">最新四季 EPS</div>
+                            <div class="text-2xl font-extrabold text-purple-600 mt-1">$${stock.eps} 元</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-2 border-slate-200 p-5 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold text-slate-700 mb-3">🌍 三大法人近 5 日買賣超記錄 (單位: 張)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b-2 border-slate-200 text-slate-500">
+                                        <th class="py-2 px-3">日期</th>
+                                        <th class="py-2 px-3">外資</th>
+                                        <th class="py-2 px-3">投信</th>
+                                        <th class="py-2 px-3">自營商</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+
+            stock.institutional.forEach(row => {
+                const fColor = row.foreign.includes("+") ? "text-red-600 font-bold" : "text-green-600 font-bold";
+                const tColor = row.trust.includes("+") ? "text-red-600 font-bold" : "text-green-600 font-bold";
+                const dColor = row.dealer.includes("+") ? "text-red-600 font-bold" : "text-green-600 font-bold";
+                html += `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="py-2 px-3 font-semibold">${row.date}</td>
+                        <td class="py-2 px-3 ${fColor}">${row.foreign}</td>
+                        <td class="py-2 px-3 ${tColor}">${row.trust}</td>
+                        <td class="py-2 px-3 ${dColor}">${row.dealer}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white border-2 border-slate-200 p-5 rounded-2xl shadow-sm">
+                            <h3 class="text-xl font-bold text-slate-700 mb-3">💰 歷年現金股利</h3>
+                            <div class="space-y-2">
+            `;
+
+            stock.dividends.forEach(d => {
+                html += `<div class="flex justify-between py-1 border-b border-slate-100 text-lg">
+                    <span class="font-bold">${d.year} 年</span>
+                    <span class="text-emerald-600 font-bold">現金股利: ${d.cash} 元 ${d.stock ? `(股票: ${d.stock})` : ''}</span>
+                </div>`;
+            });
+
+            html += `</div></div><div class="bg-white border-2 border-slate-200 p-5 rounded-2xl shadow-sm">
+                            <h3 class="text-xl font-bold text-slate-700 mb-3">📈 歷年 EPS (每股盈餘)</h3>
+                            <div class="space-y-2">`;
+
+            stock.epsHistory.forEach(e => {
+                html += `<div class="flex justify-between py-1 border-b border-slate-100 text-lg">
+                    <span class="font-bold">${e.year} 年</span>
+                    <span class="text-blue-600 font-bold">${e.val} 元</span>
+                </div>`;
+            });
+
+            html += `</div></div></div>`;
+
+            html += `
+                    <div class="bg-white border-2 border-slate-200 p-5 rounded-2xl shadow-sm">
+                        <h3 class="text-xl font-bold text-slate-700 mb-3">📰 個股近期重點新聞</h3>
+                        <div class="space-y-3">
+            `;
+
+            stock.news.forEach(n => {
+                html += `
+                    <a href="${n.url}" target="_blank" class="block p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-xl transition">
+                        <div class="text-blue-700 font-bold text-lg hover:underline">${n.title}</div>
+                        <div class="text-xs text-slate-400 mt-1">${n.date}</div>
+                    </a>
+                `;
+            });
+
+            html += `</div></div></div>`;
+            container.innerHTML = html;
+        }
+
+        function openStockDetail(code) {
+            let found = null;
+            for (let cat in stockDatabase) {
+                let match = stockDatabase[cat].find(s => s.code === code);
+                if (match) { found = match; break; }
+            }
+            if (found) {
+                window.currentStock = found;
+                currentView = 'stock_detail';
+                render();
+            }
+        }
+
+        function toggleFavorite(code) {
+            if (favorites.includes(code)) {
+                favorites = favorites.filter(c => c !== code);
+            } else {
+                favorites.push(code);
+            }
+            localStorage.setItem('mom_stock_fav', JSON.stringify(favorites));
+            render();
+        }
+
+        function goBack() {
+            if (currentView === 'stock_detail') {
+                currentView = selectedCategory ? 'sector_detail' : 'favorite';
+            } else if (currentView === 'sector_detail') {
+                currentView = 'sectors';
+            }
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
