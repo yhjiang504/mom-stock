@@ -10,7 +10,6 @@
 
     <div class="max-w-4xl mx-auto space-y-6">
         
-        <!-- 頂部標題與雙時間標籤面板 -->
         <header class="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 class="text-3xl md:text-4xl font-black text-blue-900 flex items-center gap-2">
@@ -24,7 +23,6 @@
             </div>
         </header>
 
-        <!-- 主導覽切換按鈕 -->
         <div id="main-tabs" class="grid grid-cols-2 gap-4">
             <button id="btn-fav" onclick="switchTab('favorite')" class="bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition">
                 ⭐ 我的最愛
@@ -34,14 +32,12 @@
             </button>
         </div>
 
-        <!-- 內頁返回按鈕 -->
         <div id="nav-back" class="hidden">
             <button onclick="goBack()" class="bg-slate-700 hover:bg-slate-800 text-white text-xl font-bold py-3 px-6 rounded-2xl shadow transition flex items-center gap-2">
                 ⬅️ 返回上一頁
             </button>
         </div>
 
-        <!-- 動態內容渲染容器 -->
         <main id="app-content" class="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-md min-h-[400px]">
         </main>
 
@@ -54,7 +50,7 @@
         let favorites = JSON.parse(localStorage.getItem('mom_stock_fav')) || ["2330", "2881"];
         let currentView = "favorite";
         let selectedCategory = "";
-        let searchQuery = ""; // 搜尋關鍵字
+        let searchQuery = ""; // 獨立儲存搜尋字串，避免輸入干擾
 
         async function initApp() {
             try {
@@ -68,8 +64,8 @@
                 console.log("載入預設資料...", error);
                 marketMetadata = { dailyUpdate: "展示模式", financialUpdate: "展示模式" };
                 stockDatabase = {
-                    "半導體業": [
-                        { code: "2330", name: "台積電", price: 1050, change: 25, changePct: 2.41, volume: "45,210", pe: 22.5, yieldPct: 1.52, eps: 39.2, institutional: [], dividends: [{year: "2024", cash: 16.0}], epsHistory: [{year: "2024", val: 39.2}], news: [] }
+                    "22. 半導體業": [
+                        { code: "2330", name: "台積電", price: 1050, change: 25, changePct: 2.41, volume: "45,210", pe: 22.5, yieldPct: 1.52, eps: 39.2, institutional: [], dividends: [{year: "2024", cash: 16.0, stock: 0.0, yield: 1.5}], epsHistory: [{year: "2024", val: 39.2}], news: [] }
                     ]
                 };
             }
@@ -90,7 +86,7 @@
                 document.getElementById('btn-fav').className = "bg-blue-600 text-white text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
                 document.getElementById('btn-sec').className = "bg-slate-200 text-slate-700 text-xl md:text-2xl font-bold py-4 px-4 rounded-2xl shadow-lg transition";
                 
-                renderStockList(getFavoriteStocksObject(), "⭐ 媽媽關注的最愛股票", container, true);
+                renderStockList(getFavoriteStocksObject(), "⭐ 媽媽關注的最愛股票", container);
             } 
             else if (currentView === 'sectors') {
                 mainTabs.classList.remove('hidden');
@@ -103,7 +99,7 @@
             else if (currentView === 'sector_detail') {
                 mainTabs.classList.add('hidden');
                 navBack.classList.remove('hidden');
-                renderStockList(stockDatabase[selectedCategory] || [], `📂 ${selectedCategory} 類股清單`, container, false);
+                renderStockList(stockDatabase[selectedCategory] || [], `📂 ${selectedCategory} 類股清單`, container);
             }
             else if (currentView === 'stock_detail') {
                 mainTabs.classList.add('hidden');
@@ -114,7 +110,7 @@
 
         function switchTab(tab) {
             currentView = tab;
-            searchQuery = ""; // 切換分頁時清空搜尋
+            searchQuery = ""; 
             render();
         }
 
@@ -131,26 +127,25 @@
         function renderSectorsGrid(container) {
             const categories = Object.keys(stockDatabase).sort();
             
-            // 收集所有股票以便進行全市場搜尋
             let allStocks = [];
             Object.values(stockDatabase).forEach(stocks => allStocks.push(...stocks));
             
             let html = `
                 <div class="mb-6">
                     <label class="block text-xl font-bold text-slate-700 mb-2">🔍 快速搜尋股票 (輸入代號或名稱)：</label>
-                    <input type="text" id="stock-search-input" value="${searchQuery}" oninput="handleSearch(this.value)" placeholder="例如: 2330 或 台積電" class="w-full text-xl p-4 border-2 border-blue-300 rounded-2xl focus:outline-none focus:border-blue-600 bg-slate-50">
+                    <input type="text" id="stock-search-input" value="${searchQuery}" oninput="updateSearchQuery(this)" placeholder="例如: 2330 或 台積電" class="w-full text-xl p-4 border-2 border-blue-300 rounded-2xl focus:outline-none focus:border-blue-600 bg-slate-50" lang="zh-Hant" style="ime-mode: auto;">
                 </div>
+                <div id="search-results-area">
             `;
 
             if (searchQuery.trim() !== "") {
-                // 如果有輸入搜尋關鍵字，直接顯示搜尋結果
                 const filtered = allStocks.filter(s => s.code.includes(searchQuery) || s.name.includes(searchQuery));
                 html += `<h3 class="text-2xl font-bold text-slate-700 mb-4">🔍 搜尋結果 (${filtered.length} 筆)：</h3>`;
                 container.innerHTML = html;
                 
                 let resultContainer = document.createElement('div');
                 renderStockListContent(filtered, resultContainer);
-                container.appendChild(resultContainer);
+                container.querySelector('#search-results-area').appendChild(resultContainer);
                 return;
             }
 
@@ -163,19 +158,36 @@
                     </button>
                 `;
             });
-            html += `</div>`;
+            html += `</div></div>`;
             container.innerHTML = html;
         }
 
-        function handleSearch(val) {
-            searchQuery = val;
-            // 重新渲染但不失去焦點
-            const container = document.getElementById('app-content');
-            renderSectorsGrid(container);
-            const input = document.getElementById('stock-search-input');
-            if(input) {
-                input.focus();
-                input.setSelectionRange(input.value.length, input.value.length);
+        function updateSearchQuery(input) {
+            searchQuery = input.value;
+            // 局部更新搜尋結果區塊，不重新渲染整個畫面，避免輸入法游標跳掉或重複字元
+            const resultsArea = document.getElementById('search-results-area');
+            if (!resultsArea) return;
+
+            let allStocks = [];
+            Object.values(stockDatabase).forEach(stocks => allStocks.push(...stocks));
+
+            if (searchQuery.trim() !== "") {
+                const filtered = allStocks.filter(s => s.code.includes(searchQuery) || s.name.includes(searchQuery));
+                let html = `<h3 class="text-2xl font-bold text-slate-700 mb-4">🔍 搜尋結果 (${filtered.length} 筆)：</h3>`;
+                let tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+                let listDiv = document.createElement('div');
+                renderStockListContent(filtered, listDiv);
+                tempDiv.appendChild(listDiv);
+                resultsArea.innerHTML = tempDiv.innerHTML;
+            } else {
+                // 恢復類別按鈕
+                renderSectorsGrid(document.getElementById('app-content'));
+                const restoredInput = document.getElementById('stock-search-input');
+                if (restoredInput) {
+                    restoredInput.focus();
+                    restoredInput.setSelectionRange(restoredInput.value.length, restoredInput.value.length);
+                }
             }
         }
 
@@ -185,7 +197,7 @@
             render();
         }
 
-        function renderStockList(stocks, title, container, isFavView) {
+        function renderStockList(stocks, title, container) {
             let html = `<h2 class="text-2xl font-bold text-slate-700 mb-4">${title}</h2>`;
             container.innerHTML = html;
             
@@ -268,19 +280,25 @@
                         </div>
                     </div>
 
-                    <!-- 10 年歷年股利與 EPS 區塊 -->
+                    <!-- 10 年歷年股利與殖利率區塊 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-white border-2 border-slate-200 p-5 rounded-2xl shadow-sm">
-                            <h3 class="text-xl font-bold text-slate-700 mb-3">💰 歷年現金股利 (近 10 年)</h3>
+                            <h3 class="text-xl font-bold text-slate-700 mb-3">💰 歷年股利與殖利率 (近 10 年)</h3>
                             <div class="space-y-2 max-h-60 overflow-y-auto pr-2">
             `;
 
             if (stock.dividends) {
                 stock.dividends.forEach(d => {
-                    html += `<div class="flex justify-between py-1 border-b border-slate-100 text-base">
-                        <span class="font-bold">${d.year} 年</span>
-                        <span class="text-emerald-600 font-bold">現金股利: ${d.cash} 元</span>
-                    </div>`;
+                    html += `
+                        <div class="flex justify-between items-center py-2 border-b border-slate-100 text-sm md:text-base">
+                            <span class="font-bold text-slate-700">${d.year} 年</span>
+                            <div class="text-right space-x-2">
+                                <span class="text-blue-600">現金: ${d.cash}元</span>
+                                <span class="text-purple-600">股票: ${d.stock}元</span>
+                                <span class="text-emerald-600 font-bold">殖利率: ${d.yield}%</span>
+                            </div>
+                        </div>
+                    `;
                 });
             }
 
