@@ -5,10 +5,11 @@ on:
     # 台灣時間週一至週五下午 5:00 (UTC 09:00) 自動執行
     - cron: '0 9 * * 1-5'
     
-    # 每季財報公布後定期更新的排程 (3/31, 5/15, 8/14, 11/14 隔天早上 8 點)
-    - cron: '0 8 1 4,6,9,12 *'
+  workflow_dispatch: # 允許手動點按鈕立即執行
 
-  workflow_dispatch: # 允許在 GitHub 網頁手動點按鈕立即執行
+# 【關鍵修正】授權 GitHub Actions 擁有寫入與推送權限
+permissions:
+  contents: write
 
 jobs:
   update-data:
@@ -24,7 +25,7 @@ jobs:
 
       - name: 3. 安裝需要的工具套件
         run: |
-          pip install requests pandas yfinance
+          pip install requests
 
       - name: 4. 執行 Python 抓取最新台股與財報資料
         run: |
